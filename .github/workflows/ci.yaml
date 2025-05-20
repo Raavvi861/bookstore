@@ -1,0 +1,81 @@
+name: Bookstore API CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r bookstore/requirements.txt
+      - name: Start FastAPI app
+        run: |
+          nohup uvicorn bookstore.main:app --host 0.0.0.0 --port 8000 &
+          for i in {1..20}; do
+            if curl -s http://localhost:8000/health | grep up; then
+              echo "FastAPI is up!"
+              break
+            fi
+            sleep 1
+          done
+      - name: Build and test with Maven
+        run: mvn clean test
+      - name: Generate Allure report
+        run: mvn allure:report
+      - name: Upload Allure results (raw)
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results
+          path: target/allure-results
+      - name: Upload Allure HTML report
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-html-report
+          path: target/site/allure-maven-plugin
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for gh-pages deploy
+      - name: Download Allure HTML report artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: allure-html-report
+          path: allure-html-report
+      - name: Deploy Allure HTML report to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: allure-html-report
+          publish_branch: gh-pages
+          force_orphan: true
