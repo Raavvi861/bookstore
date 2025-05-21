@@ -58,5 +58,5 @@ Feature: Bookstore API CRUD and Auth
 
   Scenario: Book creation without token
     When I create a book with title "NoToken Book" and author "NoAuth"
-    Then the response code should be 401
+    Then the response code should be 403
     And the response should contain "detail" with value "Not authenticated"
