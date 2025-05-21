@@ -9,6 +9,7 @@ Feature: Bookstore API CRUD and Auth
     And the response should contain "status" with value "up"
 
   Scenario: User signup with unique email
+  # Use a unique random email for this scenario to ensure it always passes
     When I sign up with email "RANDOM_EMAIL" and password "testpass123"
     Then the response code should be 200
     And the response should contain "message" with value "User created successfully"
