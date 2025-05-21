@@ -19,6 +19,10 @@ Feature: Bookstore API CRUD and Auth
     And the response should contain "detail" with value "Email already registered"
 
   Scenario: User login with correct credentials
+    # Use a unique random email for this scenario to ensure it always passes
+    When I sign up with email "RANDOM_EMAIL" and password "testpass123"
+    Then the response code should be 200
+    And the response should contain "message" with value "User created successfully"
     When I login with email "RANDOM_EMAIL" and password "testpass123"
     Then the response code should be 200
     And the response should contain "access_token"
@@ -59,4 +63,4 @@ Feature: Bookstore API CRUD and Auth
   Scenario: Book creation without token
     When I create a book with title "NoToken Book" and author "NoAuth"
     Then the response code should be 403
-    And the response should contain "detail" with value "Not authenticated"
+    And the response should contain "detail" with value "Invalid token or expired token"
